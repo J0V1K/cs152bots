@@ -75,7 +75,7 @@ class Report:
             elif content == "b":
                 self.state = State.ED_CONCERN
                 return ["Would you like us to look at this post and offer support to this user? Your name will be kept confidential. Respond using letter choice below:\n"
-                        "A. Yes\n",
+                        "A. Yes\n"
                         "B. No"]
 
         if self.state == State.PRO_ED:
