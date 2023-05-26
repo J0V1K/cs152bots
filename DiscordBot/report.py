@@ -63,16 +63,18 @@ class Report:
                     "Please select reason for reporting post. Respond using letter choice below:\n"
                     "A. Pro-ED Content\n"
                     "B. ED-Related Concern for User"]
-        
+        a_responses = ["a", "a."]
+        b_responses = ["b", "b."]
+        c_responses = ["c", "c."]
         if self.state == State.MESSAGE_IDENTIFIED:
             content = message.content.lower()
-            if content == "a":
+            if content in a_responses:
                 self.state = State.PRO_ED
                 return ["Please make your best attempt to identify the type of pro-ED content in this message. Respond using letter choice below:\n"
                         "A. Content encourages user(s) to develop an eating disorder\n"
                         "B. Content describes a crash diet or extreme exercise challenge\n"
                         "C. Content lays out step-by-step instructions on how to effectively starve or purge"]
-            elif content == "b":
+            elif content in b_responses:
                 self.state = State.ED_CONCERN
                 return ["Would you like us to look at this post and offer support to this user? Your name will be kept confidential. Respond using letter choice below:\n"
                         "A. Yes\n"
@@ -80,29 +82,29 @@ class Report:
 
         if self.state == State.PRO_ED:
             content = message.content.lower()
-            if content == "a":
+            if content in a_responses:
                 self.state = State.PRO_ED_A
                 return ["If possible, please try to identify the way this piece of content encourages user(s) to develop an editing disorder.\n"
                         "Please respond with the letter choice corresponding to the reported message content.\n"
                         "A. \"Meanspiration\" or content that attacks, bullies, or makes fun of user(s)\n"
                         "B. Content that praises eating disorders as a lifestyle choice\n"
                         "C. Content that derides the notion of ED-recovery"]
-            elif content == "b" or content == "c":
+            elif content in b_responses + c_responses:
                 self.state = State.REPORT_COMPLETE
                 return ["Thank you for submitting your report. We will remove the content after corroborating that content is violative of ED-related platform policies."]
 
         if self.state == State.PRO_ED_A:
             content = message.content.lower()
-            if content == "a" or content == "b" or content == "c":
+            if content in a_responses + b_responses + c_responses:
                 self.state = State.REPORT_COMPLETE
                 return ["Thank you for submitting your report. We will remove the content after corroborating that content is violative of ED-related platform policies."]
 
         if self.state == State.ED_CONCERN:
             content = message.content.lower()
-            if content == "a":
+            if content in a_responses:
                 self.state = State.REPORT_COMPLETE
                 return ["Thank you for submitting your report. We will reach out to this individual with contact information for the National Eating Disorder Information Centre (NEDIC). If this person is in immediate danger please do not hesitate to contact local emergency services."]
-            elif content == "b":
+            elif content in b_responses:
                 self.state = State.REPORT_COMPLETE
         return []
 
