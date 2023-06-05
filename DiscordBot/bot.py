@@ -1,6 +1,6 @@
 # bot.py
 import discord
-from discord.ext import commands
+from discord.ext import commands, tasks
 import os
 import json
 import logging
@@ -55,7 +55,24 @@ class ModBot(discord.Client):
             for channel in guild.text_channels:
                 if channel.name == f'group-{self.group_num}-mod':
                     self.mod_channels[guild.id] = channel
-        
+
+    
+    async def on_raw_reaction_add(self, payload):
+        '''
+        Added by Javo: Checks continously for any new reactions. If reaction is on a specific type of message, emoji reaction will be made by the bot.
+        '''
+
+        mod_channel = self.get_channel(payload.channel_id)
+        message = await mod_channel.fetch_message(payload.message_id)
+        content = message.content.split(':')
+        # checks for react to this message with an x
+        if content[0] == "React to this message with an ❌ to flag the message publically. Message ID":
+            await message.channel.send("Reaction recognized.")
+            # flags the appropriate post in the channel with an emoji 
+            flagged_id = int(content[1])
+            regular_channel = discord.utils.get(message.guild.channels, name='group-23')
+            flagged_message = await regular_channel.fetch_message(flagged_id)
+            await flagged_message.add_reaction('❌')
 
     async def on_message(self, message):
         '''
@@ -107,26 +124,36 @@ class ModBot(discord.Client):
 
         # Forward the message to the mod channel
         mod_channel = self.mod_channels[message.guild.id]
-        await mod_channel.send(f'Forwarded message:\n{message.author.name}: "{message.content}"')
-        scores = self.eval_text(message.content)
-        await mod_channel.send(self.code_format(scores))
+        generated = self.eval_text(message.content)
+        generated_split = str(generated).split(":")
+        generated_flag = generated_split[0]
+
+        # Forward message to the moderator channel only if it is problematic
+        if generated_flag != "normal":
+            # Message is brought up to the mods. Reaction will trigger on_raw_reaction_add
+            await mod_channel.send(f'User: {message.author.name}\nsent problematic message:\n "{message.content}"')
+            await mod_channel.send(self.code_format(generated))
+            await mod_channel.send("React to this message with an ❌ to flag the message publically. Message ID:" + str(message.id))
 
     
     def eval_text(self, message):
         ''''
-        TODO: Once you know how you want to evaluate messages in your channel, 
-        insert your code here! This will primarily be used in Milestone 3. 
+        Classifies text through gpt-4 using our training data.
         '''
         return classify(message)
 
     
     def code_format(self, text):
-        ''''
-        TODO: Once you know how you want to show that a message has been 
-        evaluated, insert your code here for formatting the string to be 
-        shown in the mod channel. 
         '''
-        return "Evaluated: '" + text+ "'"
+        Generated text is split into the flag and the description.
+        '''
+        text = str(text).split(":")
+        generated_flag = text[0]
+        generated_text = text[1]
+        return "Flagged as '" + generated_flag + "'\n" + generated_text[1:]
+
+        
+
 
 
 client = ModBot()
