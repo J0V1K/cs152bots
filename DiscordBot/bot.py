@@ -155,8 +155,7 @@ class ModBot(discord.Client):
         ''''
         Classifies text through gpt-4 using our training data.
         '''
-        return "meanspiration: 'Meanspiration' or content that attacks, bullies, or makes fun of user(s) with the intent of encouraging people to develop an eating disorder. This message is classified as meanspiration because it uses negative self-talk and guilt to discourage eating and encourage disordered eating behaviors."
-    #classify(message)
+        return classify(message)
 
     
     def code_format(self, text):
