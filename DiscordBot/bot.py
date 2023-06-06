@@ -74,6 +74,13 @@ class ModBot(discord.Client):
             flagged_message = await regular_channel.fetch_message(flagged_id)
             await flagged_message.add_reaction('❌')
 
+            author_id = content[2]
+            user = await self.fetch_user(author_id)
+            dm_channel = user.dm_channel
+            if dm_channel == None:
+                dm_channel = await user.create_dm()
+            await dm_channel.send("Your post has been flagged for ED content. Please be mindful about the impact of your words both on yourself and others.")
+
     async def on_message(self, message):
         '''
         This function is called whenever a message is sent in a channel that the bot can see (including DMs). 
@@ -127,13 +134,14 @@ class ModBot(discord.Client):
         generated = self.eval_text(message.content)
         generated_split = str(generated).split(":")
         generated_flag = generated_split[0]
+        author_id = message.author.id
 
         # Forward message to the moderator channel only if it is problematic
         if generated_flag != "normal":
             # Message is brought up to the mods. Reaction will trigger on_raw_reaction_add
             await mod_channel.send(f'User: {message.author.name}\nsent problematic message:\n "{message.content}"')
             await mod_channel.send(self.code_format(generated))
-            await mod_channel.send("React to this message with an ❌ to flag the message publically. Message ID:" + str(message.id))
+            await mod_channel.send("React to this message with an ❌ to flag the message publically. Message ID:" + str(message.id) + ":" + str(author_id))
 
     
     def eval_text(self, message):
