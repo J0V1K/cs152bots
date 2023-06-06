@@ -1,5 +1,6 @@
 # bot.py
 import discord
+from discord.ui import Button, View
 from discord.ext import commands, tasks
 import os
 import json
@@ -56,34 +57,36 @@ class ModBot(discord.Client):
                 if channel.name == f'group-{self.group_num}-mod':
                     self.mod_channels[guild.id] = channel
 
+    # Obsolote due to the addition of buttons on embded - Javo
+    # async def on_raw_reaction_add(self, payload):
+    #     '''
+    #     Added by Javo: Checks continously for any new reactions. If reaction is on a specific type of message, emoji reaction will be made by the bot.
+    #     '''
+
+    #     mod_channel = self.get_channel(payload.channel_id)
+    #     message = await mod_channel.fetch_message(payload.message_id)
+    #     try:
+    #         content = message.embeds[0].footer.text.split(':')
+    #     except: 
+    #         print("No Embeds in Message") 
+    #         return 
+    #     # checks for react to this message with an x
+    #     if content[0] == "React to this message with an ❌ to flag the message publically. Message ID":
+    #         await message.channel.send("Reaction recognized.")
+    #         # flags the appropriate post in the channel with an emoji 
+    #         flagged_id = int(content[1])
+    #         regular_channel = discord.utils.get(message.guild.channels, name='group-23')
+    #         flagged_message = await regular_channel.fetch_message(flagged_id)
+    #         await flagged_message.add_reaction('❌')
+
+    #         author_id = content[2]
+    #         user = await self.fetch_user(author_id)
+    #         dm_channel = user.dm_channel
+    #         if dm_channel == None:
+    #             dm_channel = await user.create_dm()
+    #         await dm_channel.send("Your post has been flagged for ED content. Please be mindful about the impact of your words both on yourself and others.")
+
     
-    async def on_raw_reaction_add(self, payload):
-        '''
-        Added by Javo: Checks continously for any new reactions. If reaction is on a specific type of message, emoji reaction will be made by the bot.
-        '''
-
-        mod_channel = self.get_channel(payload.channel_id)
-        message = await mod_channel.fetch_message(payload.message_id)
-        try:
-            content = message.embeds[0].footer.text.split(':')
-        except: 
-            print("No Embeds in Message") 
-            return 
-        # checks for react to this message with an x
-        if content[0] == "React to this message with an ❌ to flag the message publically. Message ID":
-            await message.channel.send("Reaction recognized.")
-            # flags the appropriate post in the channel with an emoji 
-            flagged_id = int(content[1])
-            regular_channel = discord.utils.get(message.guild.channels, name='group-23')
-            flagged_message = await regular_channel.fetch_message(flagged_id)
-            await flagged_message.add_reaction('❌')
-
-            author_id = content[2]
-            user = await self.fetch_user(author_id)
-            dm_channel = user.dm_channel
-            if dm_channel == None:
-                dm_channel = await user.create_dm()
-            await dm_channel.send("Your post has been flagged for ED content. Please be mindful about the impact of your words both on yourself and others.")
 
     async def on_message(self, message):
         '''
@@ -138,24 +141,85 @@ class ModBot(discord.Client):
         generated = self.eval_text(message.content)
         generated_split = str(generated).split(":")
         generated_flag = generated_split[0]
-        author_id = message.author.id
 
         # Forward message to the moderator channel only if it is problematic
         if generated_flag != "normal":
-            # Message is brought up to the mods. Reaction will trigger on_raw_reaction_add
-            embed = discord.Embed(title=f'User: {message.author.name}\nsent problematic message:\n "{message.content}"')
-            embed.color = discord.Color.red()
-            embed.add_field(name=generated_flag, value=self.code_format(generated), inline="False")
-            footer = "React to this message with an ❌ to flag the message publically. Message ID:" + str(message.id) + ":" + str(author_id)
-            embed.set_footer(text=footer)
-            await mod_channel.send(embed=embed)
+            generated_probability = float(generated_split[2].strip(' .,><'))
+            author_id = message.author.id
+            
+            if generated_probability < 0.5:
+                # Message is brought up to the mods. Reaction will trigger on_raw_reaction_add
+                embed = discord.Embed(title=f'sent problematic message:\n "{message.content}"', description="Use the button below to flag the message if appropriate.")
+                embed.color = discord.Color.red()
+                embed.add_field(name="Category: " + generated_flag, value=self.code_format(generated), inline="False")
+                embed.set_author(name=message.author.name + "#" + message.author.discriminator, icon_url=message.author.avatar.url)
+                footer = "Message ID:" + str(message.id) + ":" + str(author_id)
+                embed.set_footer(text=footer)
+                button = Button(label="Flag Message", style=discord.ButtonStyle.danger, emoji="❌")
+                async def button_callback(interaction):
+                    await interaction.response.defer(ephemeral = True, thinking = True)
+                    content = interaction.message.embeds[0].footer.text.split(':')
+                    flagged_id = int(content[1])
+                    regular_channel = discord.utils.get(message.guild.channels, name='group-23')
+                    flagged_message = await regular_channel.fetch_message(flagged_id)
+                    await flagged_message.add_reaction('❌')
+
+                    author_id = content[2]
+                    user = await self.fetch_user(author_id)
+                    dm_channel = user.dm_channel
+                    if dm_channel == None:
+                        dm_channel = await user.create_dm()
+                    await dm_channel.send("Your post has been flagged for ED content. Please be mindful about the impact of your words both on yourself and others.")
+                    await interaction.followup.send(content="Message Flagged.")
+                    return
+                button.callback = button_callback
+                view= View()
+                view.add_item(button)
+                await mod_channel.send(embed=embed, view=view)
+            else:
+                embed = discord.Embed(title=f'sent problematic message:\n "{message.content}"', description="Use the button below to unflag the message if appropriate.")
+                embed.color = discord.Color.red()
+                embed.add_field(name="Category: " + generated_flag, value=self.code_format(generated), inline="False")
+                embed.set_author(name=message.author.name + "#" + message.author.discriminator, icon_url=message.author.avatar.url)
+                footer = "Message ID:" + str(message.id) + ":" + str(author_id)
+                embed.set_footer(text=footer)
+                button = Button(label="Unflag Message", style=discord.ButtonStyle.success, emoji="✅")
+                async def button_callback(interaction):
+                    await interaction.response.defer(ephemeral = True, thinking = True)
+                    content = interaction.message.embeds[0].footer.text.split(':')
+                    flagged_id = int(content[1])
+                    regular_channel = discord.utils.get(message.guild.channels, name='group-23')
+                    flagged_message = await regular_channel.fetch_message(flagged_id)
+                    await flagged_message.remove_reaction('❌', self.user)
+
+                    author_id = content[2]
+                    user = await self.fetch_user(author_id)
+                    dm_channel = user.dm_channel
+                    if dm_channel == None:
+                        dm_channel = await user.create_dm()
+                    await dm_channel.send("Your post had been automatically flagged for ED content. Upon further review, the moderators have cleared the message. Thank you for your understanding!")
+                    await interaction.followup.send(content="Message Unflagged.")
+                    return
+                button.callback = button_callback
+                view= View()
+                view.add_item(button)
+                await mod_channel.send(embed=embed, view=view)
+                await message.add_reaction('❌')
+                user = message.author
+                dm_channel = user.dm_channel
+                if dm_channel == None:
+                    dm_channel = await user.create_dm()
+                await dm_channel.send("Your post has been flagged for ED content. Please be mindful about the impact of your words both on yourself and others.")
+            
 
     
     def eval_text(self, message):
         ''''
         Classifies text through gpt-4 using our training data.
         '''
-        return classify(message)
+        return classify(message)#"meanspiration: 'Meanspiration' or content that attacks, bullies, or makes fun of user(s) with the intent of encouraging people to develop an eating disorder. This message is classified as meanspiration because it uses negative self-talk and guilt to discourage eating and encourage disordered eating behaviors."
+    
+    #classify(message)
 
     
     def code_format(self, text):
@@ -165,7 +229,8 @@ class ModBot(discord.Client):
         text = str(text).split(":")
         generated_flag = text[0]
         generated_text = text[1]
-        return "Flagged as '" + generated_flag + "'\n" + generated_text[1:]
+        generated_probability = text[2]
+        return "Flagged as '" + generated_flag + "'\n" + generated_text[1:] + "**" + generated_probability + "**"
 
         
 

@@ -64,11 +64,11 @@ def classify(content):
             {"role": "assistant", "content": "crash"},
             {"role": "user", "content": "I survive on only Diet Coke, cigarettes and coffee."},
             {"role": "assistant", "content": "crash"},
-            {"role": "user", "content": "Don’t forget cold baths burn cals!"},
+            {"role": "user", "content": "Don't forget cold baths burn cals!"},
             {"role": "assistant", "content": "starve"},
             {"role": "user", "content": "Tips for staving off hunger and burning extra calories: try eating ice, chewing gum and fidgeting"},
             {"role": "assistant", "content": "starve"},
-            {"role": "system", "content": "Training done. Now you are a classifier. Your response should be in the format of: <category>: <explanation> <reasoning>, where <category> is one of the sub categories given at the beginning, <explanation> is what that type of content is, and <reasoning> is why the message is classified as such. \n"},
+            {"role": "system", "content": "Training done. Now you are a classifier. Your response should be in the format of: <category>: <explanation> <reasoning> :<confidence>, where <category> is one of the sub categories given at the beginning, <explanation> is what that type of content is, <reasoning> is why the message is classified as such. and <confidence> is the probability that your guess is correct. Give ONLY the probability, no other words or explanation.\n\nFor example:\n\nProbability: <the probability between 0.0 and 1.0 that your guess is correct, without any extra commentary whatsoever; just the probability!>\n\n"},
             {"role": "user", "content": content},
             # More examples/categories
         ]
