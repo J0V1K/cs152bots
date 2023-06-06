@@ -64,7 +64,11 @@ class ModBot(discord.Client):
 
         mod_channel = self.get_channel(payload.channel_id)
         message = await mod_channel.fetch_message(payload.message_id)
-        content = message.content.split(':')
+        try:
+            content = message.embeds[0].footer.text.split(':')
+        except: 
+            print("No Embeds in Message") 
+            return 
         # checks for react to this message with an x
         if content[0] == "React to this message with an ❌ to flag the message publically. Message ID":
             await message.channel.send("Reaction recognized.")
@@ -139,16 +143,20 @@ class ModBot(discord.Client):
         # Forward message to the moderator channel only if it is problematic
         if generated_flag != "normal":
             # Message is brought up to the mods. Reaction will trigger on_raw_reaction_add
-            await mod_channel.send(f'User: {message.author.name}\nsent problematic message:\n "{message.content}"')
-            await mod_channel.send(self.code_format(generated))
-            await mod_channel.send("React to this message with an ❌ to flag the message publically. Message ID:" + str(message.id) + ":" + str(author_id))
+            embed = discord.Embed(title=f'User: {message.author.name}\nsent problematic message:\n "{message.content}"')
+            embed.color = discord.Color.red()
+            embed.add_field(name=generated_flag, value=self.code_format(generated), inline="False")
+            footer = "React to this message with an ❌ to flag the message publically. Message ID:" + str(message.id) + ":" + str(author_id)
+            embed.set_footer(text=footer)
+            await mod_channel.send(embed=embed)
 
     
     def eval_text(self, message):
         ''''
         Classifies text through gpt-4 using our training data.
         '''
-        return classify(message)
+        return "meanspiration: 'Meanspiration' or content that attacks, bullies, or makes fun of user(s) with the intent of encouraging people to develop an eating disorder. This message is classified as meanspiration because it uses negative self-talk and guilt to discourage eating and encourage disordered eating behaviors."
+    #classify(message)
 
     
     def code_format(self, text):
