@@ -6,7 +6,7 @@ openai.api_key = api_key
 
 def classify(content):
     response = openai.ChatCompletion.create(
-        model="gpt-4",
+        model="gpt-3.5-turbo",
         messages=[
             {"role": "system", "content": "You are a content moderation system. Classify each input as a kind of Pro-ED content or a normal content."
              "We have these sub categories: \n"

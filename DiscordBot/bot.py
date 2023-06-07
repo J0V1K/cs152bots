@@ -147,7 +147,7 @@ class ModBot(discord.Client):
             generated_probability = float(generated_split[2].strip(' .,><'))
             author_id = message.author.id
             
-            if generated_probability < 0.5:
+            if generated_probability < 0.95:
                 # Message is brought up to the mods. Reaction will trigger on_raw_reaction_add
                 embed = discord.Embed(title=f'sent problematic message:\n "{message.content}"', description="Use the button below to flag the message if appropriate.")
                 embed.color = discord.Color.red()

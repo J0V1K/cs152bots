@@ -1,5 +1,6 @@
 from enum import Enum, auto
 import discord
+from discord.ui import Button, View
 import re
 
 class State(Enum):
@@ -53,13 +54,13 @@ class Report:
             if not channel:
                 return ["It seems this channel was deleted or never existed. Please try again or say `cancel` to cancel."]
             try:
-                message = await channel.fetch_message(int(m.group(3)))
+                self.message = await channel.fetch_message(int(m.group(3)))
             except discord.errors.NotFound:
                 return ["It seems this message was deleted or never existed. Please try again or say `cancel` to cancel."]
 
             # Here we've found the message - it's up to you to decide what to do next!
             self.state = State.MESSAGE_IDENTIFIED
-            return ["I found this message:", "```" + message.author.name + ": " + message.content + "```",
+            return ["I found this message:", "```" + self.message.author.name + ": " + self.message.content + "```",
                     "Please select reason for reporting post. Respond using letter choice below:\n"
                     "A. Pro-ED Content\n"
                     "B. ED-Related Concern for User"]
@@ -90,22 +91,110 @@ class Report:
                         "B. Content that praises eating disorders as a lifestyle choice\n"
                         "C. Content that derides the notion of ED-recovery"]
             elif content in b_responses + c_responses:
+                if content in b_responses:
+                    flag = "crash"
+                else: 
+                    flag = "starve"
+                author_id = self.message.author.id
+                user = await self.client.fetch_user(author_id)
+                dm_channel = user.dm_channel
+                if dm_channel == None:
+                    dm_channel = await user.create_dm()
+                embed = discord.Embed(title=f'sent problematic message:\n "{self.message.content}"', description="Use the button below to flag the message if appropriate.")
+                embed.color = discord.Color.orange()
+                embed.set_author(name=message.author.name + "#" + self.message.author.discriminator, icon_url=self.message.author.avatar.url)
+                embed.add_field(name="Category: " + flag, value=f'Manually Reported by:\n "{message.author.name}#{message.author.discriminator}"', inline="False")
+                mod_channel = discord.utils.get(self.client.get_all_channels(), name="group-23-mod")
+                #
+                footer = "Message ID:" + str(self.message.id) + ":" + str(author_id)
+                embed.set_footer(text=footer)
+                button = Button(label="Flag Message", style=discord.ButtonStyle.danger, emoji="❌")
+                async def button_callback(interaction):
+                    await interaction.response.defer(ephemeral = True, thinking = True)
+                    footer_content = interaction.message.embeds[0].footer.text.split(':')
+                    flagged_id = int(footer_content[1])
+                    regular_channel = discord.utils.get(self.message.guild.channels, name='group-23')
+                    flagged_message = await regular_channel.fetch_message(flagged_id)
+                    await flagged_message.add_reaction('❌')
+
+                    author_id = footer_content[2]
+                    user = await self.client.fetch_user(author_id)
+                    dm_channel = user.dm_channel
+                    if dm_channel == None:
+                        dm_channel = await user.create_dm()
+                    await dm_channel.send("Your post has been flagged for ED content. Please be mindful about the impact of your words both on yourself and others.")
+                    await interaction.followup.send(content="Message Flagged.")
+                    return
+                button.callback = button_callback
+                view= View()
+                view.add_item(button)
+                await mod_channel.send(embed=embed, view=view)
                 self.state = State.REPORT_COMPLETE
                 return ["Thank you for submitting your report. We will remove the content after corroborating that content is violative of ED-related platform policies."]
 
         if self.state == State.PRO_ED_A:
             content = message.content.lower()
             if content in a_responses + b_responses + c_responses:
+                if content in a_responses:
+                    flag = "meanspiration"
+                elif content in b_responses: 
+                    flag = "praises"
+                else: 
+                    flag = "derides"
+                author_id = self.message.author.id
+                user = await self.client.fetch_user(author_id)
+                dm_channel = user.dm_channel
+                if dm_channel == None:
+                    dm_channel = await user.create_dm()
+                embed = discord.Embed(title=f'sent problematic message:\n "{self.message.content}"', description="Use the button below to flag the message if appropriate.")
+                embed.color = discord.Color.orange()
+                embed.set_author(name=message.author.name + "#" + self.message.author.discriminator, icon_url=self.message.author.avatar.url)
+                embed.add_field(name="Category: " + flag, value=f'Manually Reported by:\n "{message.author.name}#{message.author.discriminator}"', inline="False")
+                mod_channel = discord.utils.get(self.client.get_all_channels(), name="group-23-mod")
+                #
+                footer = "Message ID:" + str(self.message.id) + ":" + str(author_id)
+                embed.set_footer(text=footer)
+                button = Button(label="Flag Message", style=discord.ButtonStyle.danger, emoji="❌")
+                async def button_callback(interaction):
+                    await interaction.response.defer(ephemeral = True, thinking = True)
+                    footer_content = interaction.message.embeds[0].footer.text.split(':')
+                    flagged_id = int(footer_content[1])
+                    regular_channel = discord.utils.get(self.message.guild.channels, name='group-23')
+                    flagged_message = await regular_channel.fetch_message(flagged_id)
+                    await flagged_message.add_reaction('❌')
+
+                    author_id = footer_content[2]
+                    user = await self.client.fetch_user(author_id)
+                    dm_channel = user.dm_channel
+                    if dm_channel == None:
+                        dm_channel = await user.create_dm()
+                    await dm_channel.send("Your post has been flagged for ED content. Please be mindful about the impact of your words both on yourself and others.")
+                    await interaction.followup.send(content="Message Flagged.")
+                    return
+                button.callback = button_callback
+                view= View()
+                view.add_item(button)
+                await mod_channel.send(embed=embed, view=view)
                 self.state = State.REPORT_COMPLETE
                 return ["Thank you for submitting your report. We will remove the content after corroborating that content is violative of ED-related platform policies."]
 
         if self.state == State.ED_CONCERN:
             content = message.content.lower()
             if content in a_responses:
+                author_id = message.author.id
+                user = await self.client.fetch_user(author_id)
+                dm_channel = user.dm_channel
+                if dm_channel == None:
+                    dm_channel = await user.create_dm()
+                embed = discord.Embed(title=f'Are you doing okay?', description="We are reaching because we want to support you. Someone is concerned that you might be experiencing harmful habits. Please don't hesitate to call 1-866-NEDIC-20 to talk to someone who can understand and help you.")
+                embed.color = discord.Color.yellow()
+                embed.add_field(name="Resources:", value="[Click here to contact NEDIC](https://nedic.ca/contact/)", inline="False")
+                await dm_channel.send(embed=embed)
                 self.state = State.REPORT_COMPLETE
                 return ["Thank you for submitting your report. We will reach out to this individual with contact information for the National Eating Disorder Information Centre (NEDIC). If this person is in immediate danger please do not hesitate to contact local emergency services."]
             elif content in b_responses:
                 self.state = State.REPORT_COMPLETE
+                return ["You have decided not to file the report on this message. Please feel free to report a genuine concern at any time."]
         return []
 
     def report_complete(self):
